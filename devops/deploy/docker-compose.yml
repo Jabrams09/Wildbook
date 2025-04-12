@@ -22,6 +22,11 @@ services:
       # development exposure, not exposed in production
       - 5433:5432
     environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  wildbook:
+    image: wildme/wildbook:${WILDBOOK_TAG:-main}
+    environment:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       WBIA_DB_NAME: "${WBIA_DB_NAME}"
       WBIA_DB_USER: "${WBIA_DB_USER}"
@@ -29,20 +34,19 @@ services:
       WILDBOOK_DB_NAME: "${WILDBOOK_DB_NAME}"
       WILDBOOK_DB_USER: "${WILDBOOK_DB_USER}"
       WILDBOOK_DB_PASSWORD: "${WILDBOOK_DB_PASSWORD}"
-
-  wildbook:
-    image: wildme/wildbook:${WILDBOOK_TAG:main}
+      HOUSTON_CLIENT_SECRET: "${HOUSTON_CLIENT_SECRET}"
+      HOUSTON_CLIENT_ID: "${HOUSTON_CLIENT_ID}"
+    volumes:
+      - /tmp:/tmp
+    ports:
+      - "81:81"
     depends_on:
       db:
         condition: service_healthy
     labels:
       - autoheal=true
-
     networks:
       - intranet
-    ports:
-      # FIXME: exposed for developer verification
-      - "81:8080"
 
   wbia:
     # https://github.com/WildMeOrg/wildbook-ia
@@ -51,9 +55,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # healthcheck:  # WBIA defines it's own health check and is already labeled for autoheal
-    # labels:
-    #   - autoheal=true
     volumes:
       - wbia-database-var:/data/db
       - wbia-cache-var:/cache
@@ -68,11 +69,6 @@ services:
 
   nginx:
     image: nginx:1.23.4
-    #healthcheck:
-      #test: [ "CMD", "curl", "-f", "http://localhost:84/"]
-      #interval: 10s
-      #timeout: 5s
-      #retries: 60
     labels:
       - autoheal=true
     volumes:
@@ -80,7 +76,7 @@ services:
     networks:
       - intranet
     ports:
-      # BBB deprecated in favor or port 80, remains for backward compat
+      # BBB deprecated in favor of port 80, remains for backward compat
       - "80:80"
     depends_on:
       - wildbook
